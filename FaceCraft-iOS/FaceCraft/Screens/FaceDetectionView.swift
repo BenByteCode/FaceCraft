@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct FaceDetectionView: View {
-    @StateObject private var cameraService = CameraFaceDetectionService()
+    @StateObject private var viewModel = CameraViewModel()
     
     @State private var showOverlays = true
     @State private var showDebugHUD = true
@@ -16,13 +16,13 @@ struct FaceDetectionView: View {
     var body: some View {
         ZStack {
             // Camera preview
-            CameraPreview(session: cameraService.session)
+            CameraPreview(session: viewModel.service.session)
                 .ignoresSafeArea()
             
             // Face overlays
             if showOverlays {
                 GeometryReader { geo in
-                    ForEach(cameraService.faces) { face in
+                    ForEach(viewModel.faces) { face in
                         FaceOverlayShape(normalizedRect: face.boundingBox)
                             .stroke(style: StrokeStyle(lineWidth: 2,
                                                        lineCap: .round,
@@ -59,7 +59,7 @@ struct FaceDetectionView: View {
                         
                         Spacer()
                         
-                        Text("Faces: \(cameraService.faces.count)")
+                        Text("Faces: \(viewModel.faces.count)")
                             .font(.subheadline.monospacedDigit())
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)

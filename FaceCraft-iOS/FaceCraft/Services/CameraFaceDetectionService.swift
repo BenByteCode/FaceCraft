@@ -9,18 +9,18 @@ import Foundation
 import AVFoundation
 import Vision
 import UIKit
-import Combine
 
-final class CameraFaceDetectionService: NSObject, ObservableObject {
-    // Exposed to SwiftUI
-    @Published var faces: [DetectedFace] = []
+final class CameraFaceDetectionService: NSObject {
     
     let session = AVCaptureSession()
+    
+    /// Callback to deliver detected faces
+    var onFacesDetected: (([DetectedFace]) -> Void)?
     
     private let sessionQueue = DispatchQueue(label: "camera.session.queue")
     private let videoOutput = AVCaptureVideoDataOutput()
     private var lastRequestTime: CFTimeInterval = 0
-    private let minRequestInterval: CFTimeInterval = 0.1 // 10 fps max for Vision
+    private let minRequestInterval: CFTimeInterval = 0.1
     
     override init() {
         super.init()
@@ -34,22 +34,17 @@ final class CameraFaceDetectionService: NSObject, ObservableObject {
             self.session.beginConfiguration()
             self.session.sessionPreset = .high
             
-            // Camera input
             guard let device = AVCaptureDevice.default(.builtInWideAngleCamera,
-                                                       for: .video,
-                                                       position: .front) ?? // front camera
-                               AVCaptureDevice.default(.builtInWideAngleCamera,
-                                                       for: .video,
-                                                       position: .back),
-                  let input = try? AVCaptureDeviceInput(device: device),
-                  self.session.canAddInput(input) else {
-                print("Failed to create camera input.")
-                self.session.commitConfiguration()
-                return
-            }
-            self.session.addInput(input)
+                        for: .video,
+                        position: .front)
+               ?? AVCaptureDevice.default(.builtInWideAngleCamera,
+                        for: .video,
+                        position: .back),
+                  let input = try? AVCaptureDeviceInput(device: device)
+            else { return }
             
-            // Video output
+            if self.session.canAddInput(input) { self.session.addInput(input) }
+            
             self.videoOutput.setSampleBufferDelegate(self, queue: DispatchQueue(label: "camera.video.queue"))
             self.videoOutput.alwaysDiscardsLateVideoFrames = true
             
@@ -57,7 +52,6 @@ final class CameraFaceDetectionService: NSObject, ObservableObject {
                 self.session.addOutput(self.videoOutput)
             }
             
-            // Match orientation
             if let connection = self.videoOutput.connection(with: .video),
                connection.isVideoOrientationSupported {
                 connection.videoOrientation = .portrait
@@ -69,81 +63,55 @@ final class CameraFaceDetectionService: NSObject, ObservableObject {
     }
 }
 
+// MARK: - Vision Processing
 extension CameraFaceDetectionService: AVCaptureVideoDataOutputSampleBufferDelegate {
+    
     func captureOutput(_ output: AVCaptureOutput,
                        didOutput sampleBuffer: CMSampleBuffer,
                        from connection: AVCaptureConnection) {
         
         let now = CACurrentMediaTime()
-        guard now - lastRequestTime > minRequestInterval else {
-            return // throttle Vision
-        }
+        guard now - lastRequestTime > minRequestInterval else { return }
         lastRequestTime = now
         
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
         
         let request = VNDetectFaceLandmarksRequest { [weak self] request, error in
             guard let self else { return }
-            if let error = error {
-                print("Vision error: \(error)")
-                return
-            }
-            self.handleVisionResults(request.results, in: pixelBuffer)
+            guard error == nil else { return }
+            self.processVisionResults(request.results)
         }
         
-        let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer,
-                                            orientation: .leftMirrored, // front-camera portrait
-                                            options: [:])
-        do {
-            try handler.perform([request])
-        } catch {
-            print("Failed to perform Vision request: \(error)")
-        }
+        let handler = VNImageRequestHandler(
+            cvPixelBuffer: pixelBuffer,
+            orientation: .leftMirrored
+        )
+        
+        try? handler.perform([request])
     }
     
-    private func handleVisionResults(_ results: [Any]?, in pixelBuffer: CVPixelBuffer) {
-        guard let faceObservations = results as? [VNFaceObservation], !faceObservations.isEmpty else {
-            DispatchQueue.main.async {
-                self.faces = []
-            }
-            return
-        }
+    private func processVisionResults(_ results: [Any]?) {
+        guard let faceObservations = results as? [VNFaceObservation] else { return }
         
-        // We only know normalized coordinates here; actual view size will be known in SwiftUI.
-        // So: we’ll store them for a "virtual" size (e.g., 1x1), and scale later.
-        // BUT: it’s usually easier to directly convert in SwiftUI.
-        //
-        // For simplicity, we’ll keep normalized bounding boxes & points,
-        // and convert them in the SwiftUI overlay.
-        
-        let normalizedFaces: [DetectedFace] = faceObservations.compactMap { obs in
-            let bbox = obs.boundingBox // normalized (0–1)
-            
+        let faces: [DetectedFace] = faceObservations.compactMap { obs in
             guard let landmarks = obs.landmarks else {
-                return DetectedFace(
-                    boundingBox: bbox,
-                    leftEye: [],
-                    rightEye: []
-                )
+                return DetectedFace(boundingBox: obs.boundingBox, leftEye: [], rightEye: [])
             }
             
-            func convertPoints(_ region: VNFaceLandmarkRegion2D?) -> [CGPoint] {
-                guard let region = region else { return [] }
+            func convert(_ region: VNFaceLandmarkRegion2D?) -> [CGPoint] {
+                guard let region else { return [] }
                 return region.normalizedPoints.map { CGPoint(x: CGFloat($0.x), y: CGFloat($0.y)) }
             }
             
-            let leftEyePoints = convertPoints(landmarks.leftEye)
-            let rightEyePoints = convertPoints(landmarks.rightEye)
-            
             return DetectedFace(
-                boundingBox: bbox,
-                leftEye: leftEyePoints,
-                rightEye: rightEyePoints
+                boundingBox: obs.boundingBox,
+                leftEye: convert(landmarks.leftEye),
+                rightEye: convert(landmarks.rightEye)
             )
         }
         
-        DispatchQueue.main.async {
-            self.faces = normalizedFaces
+        DispatchQueue.main.async { [weak self] in
+            self?.onFacesDetected?(faces)
         }
     }
 }
