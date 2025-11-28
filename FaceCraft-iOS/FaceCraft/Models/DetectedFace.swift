@@ -10,7 +10,8 @@ import CoreGraphics
 
 struct DetectedFace: Identifiable {
     let id = UUID()
-    let boundingBox: CGRect            // In view coordinates
-    let leftEye: [CGPoint]             // In view coordinates
-    let rightEye: [CGPoint]            // In view coordinates
+    let boundingBox: CGRect
+    let leftEye: [CGPoint]
+    let rightEye: [CGPoint]
+    let mouth: [CGPoint]
 }

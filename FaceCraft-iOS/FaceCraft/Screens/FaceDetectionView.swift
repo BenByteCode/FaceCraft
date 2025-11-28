@@ -34,17 +34,23 @@ struct FaceDetectionView: View {
                                 .foregroundColor(.yellow)
                             
                             // Left Eye
-                            EyeOverlayShape(points: face.leftEye)
+                            GenericLandmarkShape(points: face.leftEye)
                                 .stroke(style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
                                 .foregroundColor(.green)
                             
                             // Right Eye
-                            EyeOverlayShape(points: face.rightEye)
+                            GenericLandmarkShape(points: face.rightEye)
                                 .stroke(style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
                                 .foregroundColor(.green)
+                            
+                            // Mouth
+                            GenericLandmarkShape(points: face.mouth)
+                                .stroke(style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                                .foregroundColor(.red)
                         }
                     }
                     .allowsHitTesting(false)
+                    // Ensure the overlay coordinate space matches the camera (which ignores safe area)
                     .ignoresSafeArea()
                 }
                 
@@ -112,7 +118,7 @@ struct FaceDetectionView: View {
                 viewModel.stop()
             }
         }
-        .ignoresSafeArea()
+        .ignoresSafeArea() // Important: Ensures (0,0) is top-left of screen, not safe area
     }
 }
 
@@ -131,8 +137,9 @@ struct FaceOverlayShape: Shape {
     }
 }
 
-struct EyeOverlayShape: Shape {
-    /// Eye points in View Coordinates (pixels)
+// Renamed from EyeOverlayShape to be generic for Mouth too
+struct GenericLandmarkShape: Shape {
+    /// Points in View Coordinates (pixels)
     let points: [CGPoint]
     
     func path(in rect: CGRect) -> Path {

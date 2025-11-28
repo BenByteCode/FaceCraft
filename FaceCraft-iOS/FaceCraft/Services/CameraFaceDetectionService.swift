@@ -143,7 +143,7 @@ extension CameraFaceDetectionService: AVCaptureVideoDataOutputSampleBufferDelega
             let bbox = self.convertToViewRect(normalizedBox, imageSize: imgSize, viewSize: viewSize)
             
             guard let landmarks = face.landmarks else {
-                return DetectedFace(boundingBox: bbox, leftEye: [], rightEye: [])
+                return DetectedFace(boundingBox: bbox, leftEye: [], rightEye: [], mouth: [])
             }
             
             // 2. Convert landmarks
@@ -168,7 +168,8 @@ extension CameraFaceDetectionService: AVCaptureVideoDataOutputSampleBufferDelega
             return DetectedFace(
                 boundingBox: bbox,
                 leftEye: convertRegion(landmarks.leftEye),
-                rightEye: convertRegion(landmarks.rightEye)
+                rightEye: convertRegion(landmarks.rightEye),
+                mouth: convertRegion(landmarks.outerLips)
             )
         }
         
