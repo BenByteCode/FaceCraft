@@ -8,9 +8,6 @@
 import SwiftUI
 import AVFoundation
 
-import SwiftUI
-import AVFoundation
-
 struct FaceDetectionView: View {
     @StateObject private var viewModel = CameraViewModel()
     
@@ -52,6 +49,16 @@ struct FaceDetectionView: View {
                             GenericLandmarkShape(points: face.rightEye)
                                 .stroke(style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
                                 .foregroundColor(.green)
+                            
+                            // Nose Base
+                            GenericLandmarkShape(points: face.nose)
+                                .stroke(style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                                .foregroundColor(.orange)
+                            
+                            // Nose Bridge (Crest)
+                            GenericLandmarkShape(points: face.noseCrest)
+                                .stroke(style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                                .foregroundColor(.orange)
                             
                             // Mouth
                             GenericLandmarkShape(points: face.mouth)

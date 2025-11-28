@@ -11,12 +11,6 @@ import Vision
 import UIKit
 import ImageIO
 
-import Foundation
-import AVFoundation
-import Vision
-import UIKit
-import ImageIO
-
 final class CameraFaceDetectionService: NSObject {
     
     // MARK: - Public
@@ -149,7 +143,7 @@ extension CameraFaceDetectionService: AVCaptureVideoDataOutputSampleBufferDelega
             let bbox = self.convertToViewRect(normalizedBox, imageSize: imgSize, viewSize: viewSize)
             
             guard let landmarks = face.landmarks else {
-                return DetectedFace(boundingBox: bbox, leftEye: [], rightEye: [], mouth: [], faceContour: [])
+                return DetectedFace(boundingBox: bbox, leftEye: [], rightEye: [], mouth: [], nose: [], noseCrest: [], faceContour: [])
             }
             
             // 2. Convert landmarks
@@ -176,6 +170,8 @@ extension CameraFaceDetectionService: AVCaptureVideoDataOutputSampleBufferDelega
                 leftEye: convertRegion(landmarks.leftEye),
                 rightEye: convertRegion(landmarks.rightEye),
                 mouth: convertRegion(landmarks.outerLips),
+                nose: convertRegion(landmarks.nose),
+                noseCrest: convertRegion(landmarks.noseCrest),
                 faceContour: convertRegion(landmarks.faceContour)
             )
         }
