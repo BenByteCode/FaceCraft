@@ -23,4 +23,17 @@ final class CameraViewModel: ObservableObject {
             self?.faces = detectedFaces
         }
     }
+    
+    func start() {
+        service.start()
+    }
+    
+    func stop() {
+        service.stop()
+    }
+    
+    /// Pass view dimensions to service for coordinate mapping
+    func updateViewSize(_ size: CGSize) {
+        service.previewViewSize = size
+    }
 }

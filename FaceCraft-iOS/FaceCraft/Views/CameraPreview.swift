@@ -10,6 +10,8 @@ import SwiftUI
 import AVFoundation
 
 struct CameraPreview: UIViewRepresentable {
+    @ObservedObject var viewModel: CameraViewModel
+    
     final class VideoPreviewView: UIView {
         override class var layerClass: AnyClass {
             AVCaptureVideoPreviewLayer.self
@@ -20,16 +22,20 @@ struct CameraPreview: UIViewRepresentable {
         }
     }
     
-    let session: AVCaptureSession
-    
     func makeUIView(context: Context) -> VideoPreviewView {
         let view = VideoPreviewView()
-        view.videoPreviewLayer.session = session
+        view.videoPreviewLayer.session = viewModel.service.session
         view.videoPreviewLayer.videoGravity = .resizeAspectFill
         return view
     }
     
     func updateUIView(_ uiView: VideoPreviewView, context: Context) {
-        // Nothing for now
+        // IMPORTANT: update preview size for aspect-fill transform alignment
+        DispatchQueue.main.async {
+            let size = uiView.bounds.size
+            if size != .zero {
+                viewModel.service.previewViewSize = size
+            }
+        }
     }
 }
