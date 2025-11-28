@@ -92,6 +92,7 @@ struct FaceDetectionView: View {
                                 .cornerRadius(8)
                         }
                         .padding()
+                        .padding(.top, 50)
                         
                         Spacer()
                     }
