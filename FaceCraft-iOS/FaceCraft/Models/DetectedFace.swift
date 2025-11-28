@@ -14,4 +14,5 @@ struct DetectedFace: Identifiable {
     let leftEye: [CGPoint]
     let rightEye: [CGPoint]
     let mouth: [CGPoint]
+    let faceContour: [CGPoint]
 }

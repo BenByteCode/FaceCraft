@@ -8,6 +8,9 @@
 import SwiftUI
 import AVFoundation
 
+import SwiftUI
+import AVFoundation
+
 struct FaceDetectionView: View {
     @StateObject private var viewModel = CameraViewModel()
     
@@ -26,8 +29,15 @@ struct FaceDetectionView: View {
                     // We use a ZStack here so the shapes draw in the full screen coordinate space
                     ZStack {
                         ForEach(viewModel.faces) { face in
-                            // Face Box
-                            FaceOverlayShape(boundingBox: face.boundingBox)
+                            // Face Bounding Box
+                            FaceBoundingBoxShape(boundingBox: face.boundingBox)
+                                .stroke(style: StrokeStyle(lineWidth: 2,
+                                                           lineCap: .round,
+                                                           lineJoin: .round))
+                                .foregroundColor(.cyan)
+                            
+                            // Face Contour
+                            GenericLandmarkShape(points: face.faceContour)
                                 .stroke(style: StrokeStyle(lineWidth: 2,
                                                            lineCap: .round,
                                                            lineJoin: .round))
@@ -124,20 +134,19 @@ struct FaceDetectionView: View {
 
 // MARK: - Shapes
 
-struct FaceOverlayShape: Shape {
+struct FaceBoundingBoxShape: Shape {
     /// Bounding box in View Coordinates (pixels)
     let boundingBox: CGRect
     
     func path(in rect: CGRect) -> Path {
         var path = Path()
         // Since boundingBox is already in view coordinates, we draw it directly.
-        // We assume 'rect' is the full screen size (provided by the ZStack/GeometryReader parent)
         path.addRoundedRect(in: boundingBox, cornerSize: CGSize(width: 10, height: 10))
         return path
     }
 }
 
-// Renamed from EyeOverlayShape to be generic for Mouth too
+// Renamed from EyeOverlayShape to be generic for Mouth, Eyes and Face Contour
 struct GenericLandmarkShape: Shape {
     /// Points in View Coordinates (pixels)
     let points: [CGPoint]
@@ -150,7 +159,10 @@ struct GenericLandmarkShape: Shape {
         for point in points.dropFirst() {
             path.addLine(to: point)
         }
-        path.closeSubpath()
+        // Do not close the subpath for the face contour, as it's an open curve.
+        // Eyes and mouth are closed loops, so we can keep it closed for them if preferred,
+        // but Vision endpoints for face contour are not same.
+        // path.closeSubpath()
         return path
     }
 }
